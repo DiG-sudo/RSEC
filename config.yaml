@@ -1,0 +1,78 @@
+# RSEC paper configuration for the fixed 60%/20%/20% sequence-level split.
+data_root: data
+
+split_protocol:
+  strategy: sequence_level_fixed_holdout_60_20_20
+  split_seed: 42
+  validation_seed: 42
+  manifest_root: splits_fixed_60_20_20
+  output_root: outputs
+
+model:
+  channels: 64
+  dropout: 0.1
+  dilations: [1, 2, 4, 8, 16]
+  gamma_init: 0.001
+  num_heads: 4
+  ffn_ratio: 4
+  decoder_layers: 1
+  minimum_background_gap: 1
+  max_decode_events: 8
+
+training:
+  seed: 45
+  epochs: 200
+  batch_size: 128
+  eval_batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.0005
+  early_stopping_patience: 10
+  early_stopping_min_delta: 0.001
+
+runtime:
+  amp: false
+  num_workers: 4
+
+datasets:
+  EIF4A3:
+    split: splits_fixed_60_20_20/EIF4A3/split.json
+    split_hash: 60f6c973259127e124970e883bd2aee422a1aeb17186e2b6328c6352d25b1768
+    checkpoint: checkpoints/EIF4A3/best_event_checkpoint.pt
+    checkpoint_sha256: 8b16688a65d0c64e5d704cb279a185fc313e7ad1d360f630ba7e1885c6d8d3ed
+    seqcal_threshold: 0.127
+  EWSR1:
+    split: splits_fixed_60_20_20/EWSR1/split.json
+    split_hash: 39f299a62c3c785c2ce59f4d96c9ab9f89bb86866fa45f5f81856ee0c51431c5
+    checkpoint: checkpoints/EWSR1/best_event_checkpoint.pt
+    checkpoint_sha256: a0bb362f2f53c6c246af28d2b8cfa18ea1e68012887249c9774c3fbd15bab20c
+    seqcal_threshold: 0.966
+  FXR1:
+    split: splits_fixed_60_20_20/FXR1/split.json
+    split_hash: e846b9118153ed98c911c6ea734e9acf50b21c9bc54e7eb695dd929cc090ced4
+    checkpoint: checkpoints/FXR1/best_event_checkpoint.pt
+    checkpoint_sha256: a603bee53b0cc27a2b3b55ea2aebae7ff39d634ad205463654e5f67262d30536
+    seqcal_threshold: 0.472
+  FXR2:
+    split: splits_fixed_60_20_20/FXR2/split.json
+    split_hash: bb6e86899b546f92503774315277e3c96a7377ccceb35f90428882fd27a4867d
+    checkpoint: checkpoints/FXR2/best_event_checkpoint.pt
+    checkpoint_sha256: 12d9f6d57c0b754a84f70573fc84b4b17a21a2b30a39aae61ff6ef2a3a2b8b16
+    seqcal_threshold: 0.499
+  IGF2BP2:
+    split: splits_fixed_60_20_20/IGF2BP2/split.json
+    split_hash: c8656a7aecd9d13684066e43bd92b2bdb9951315562be67ada22e1b916423a13
+    checkpoint: checkpoints/IGF2BP2/best_event_checkpoint.pt
+    checkpoint_sha256: 543be9dd07d06b79b05ca4b99bbc7c6c86add4d39b8b670542b691f12430ffcc
+    seqcal_threshold: 0.215
+  IGF2BP3:
+    split: splits_fixed_60_20_20/IGF2BP3/split.json
+    split_hash: 1187a6ca3c1f9a5ee954688a03e04ec952349d341c93cf29bea1dde1699af8d6
+    checkpoint: checkpoints/IGF2BP3/best_event_checkpoint.pt
+    checkpoint_sha256: b7f921dce4adb5095a15854d49af7a0b2e65bf4d4edfa8ca1ee7e5389f2d28ef
+    seqcal_threshold: 0.220
+  MOV10:
+    split: splits_fixed_60_20_20/MOV10/split.json
+    split_hash: 9cec4c30218a8b36cfd582fc69c38494ea6efc39a4fd285804dba3730a3f18ba
+    checkpoint: checkpoints/MOV10/best_event_checkpoint.pt
+    checkpoint_sha256: 7b68d47564c209a866677ba4f019e621179d1220cf8e8a9ffc24c92d765c5448
+    seqcal_threshold: 0.457

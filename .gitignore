@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.idea/
+.vscode/
+.venv/
+venv/
+outputs/
+outputs_fixed_70_10_20/
+outputs_fixed_60_20_20/
+checkpoints/*/*.tmp
+*.log
+.pytest_cache/
+.ipynb_checkpoints/

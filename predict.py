@@ -1,5 +1,3 @@
-"""Run a paper RSEC checkpoint on an arbitrary nucleotide FASTA file."""
-
 from __future__ import annotations
 
 import argparse
@@ -119,7 +117,7 @@ def predict(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description='Run a paper RSEC checkpoint on an arbitrary nucleotide FASTA file.')
     parser.add_argument("--config", default=str(PROJECT_ROOT / "config.yaml"))
     parser.add_argument("--rbp", required=True, choices=RBPS)
     parser.add_argument("--input", required=True, help="Unlabelled nucleotide FASTA")

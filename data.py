@@ -1,5 +1,3 @@
-"""Dataset parsing, predefined split validation, and batching for RSEC."""
-
 from __future__ import annotations
 
 import hashlib
@@ -73,8 +71,6 @@ class SequenceDataset(Dataset):
         self.sequences = sequences
         self.labels = labels
         self.ids = list(identifiers)
-        # Match the authoritative training runner's --cache-sample-tensors
-        # behavior: encode each sequence once before DataLoader workers start.
         self._feature_cache = [
             torch.from_numpy(one_hot(self.sequences[identifier]))
             for identifier in self.ids
@@ -156,12 +152,6 @@ def make_loader(
 
 
 def _split_payload(manifest: dict) -> dict:
-    """Canonical payload for a new split hash.
-
-    Protocol metadata are validated separately. The hash deliberately
-    identifies the final ordered train/validation/test membership only, so
-    every model using the same RBP receives the same value.
-    """
     return {
         "train_ids": list(manifest["train_ids"]),
         "val_ids": list(manifest["val_ids"]),
@@ -178,7 +168,6 @@ def split_hash(manifest: dict) -> str:
 def load_annotated_sequences(
     data_root: str | Path, rbp: str
 ) -> tuple[dict[str, str], dict[str, np.ndarray], list[str]]:
-    """Merge the former train/test annotations into one sequence-level pool."""
     if rbp not in RBPS:
         raise ValueError(f"unsupported RBP: {rbp}")
     directory = Path(data_root) / rbp
@@ -195,8 +184,6 @@ def load_annotated_sequences(
     sequences = {sequence_id(header): sequence for header, sequence in read_fasta(required[0])}
     if "" in sequences:
         raise RuntimeError(f"{rbp}: empty sequence ID in sequence FASTA")
-    # All available sequence IDs enter the new split. The old train/test files
-    # are used only as annotation sources and confer no split identity.
     identifiers = sorted(sequences)
     labels = {key: np.zeros(len(sequences[key]), dtype=np.float32) for key in identifiers}
     for key, start, end in [*read_sites(required[1]), *read_sites(required[2])]:
@@ -212,7 +199,6 @@ def load_splits(
     rbp: str,
     manifest_path: str | Path,
 ) -> tuple[dict[str, Subset], str, dict]:
-    """Load the predefined fixed split; incompatible manifests are rejected."""
     sequences, labels, all_ids = load_annotated_sequences(data_root, rbp)
     manifest = json.loads(Path(manifest_path).read_text())
     if manifest.get("split_strategy") != FIXED_SPLIT_STRATEGY:
@@ -276,7 +262,6 @@ def load_splits(
 def dense_labels_to_intervals(
     labels: torch.Tensor, sequence_mask: torch.Tensor
 ) -> dict[str, torch.Tensor]:
-    """Convert maximal positive runs into inclusive start/end event targets."""
     valid = (labels >= 0.5) & sequence_mask.bool()
     padded = torch.nn.functional.pad(valid, (1, 1), value=False)
     start_edges = (~padded[:, :-1]) & padded[:, 1:]

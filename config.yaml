@@ -1,4 +1,3 @@
-# RSEC paper configuration for the fixed 60%/20%/20% sequence-level split.
 data_root: data
 
 split_protocol:

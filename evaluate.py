@@ -1,5 +1,3 @@
-"""Checkpoint loading and Native/SeqCal evaluation for the full RSEC model."""
-
 from __future__ import annotations
 
 import argparse
@@ -167,6 +165,18 @@ def configured_rbp(
     return subsets, computed_hash, entry
 
 
+def paper_test_subset(
+    rbp: str, subset: torch.utils.data.Subset
+) -> torch.utils.data.Subset:
+    path = PROJECT_ROOT / "retained_test_ids.json"
+    retained_ids = json.loads(path.read_text(encoding="utf-8"))[rbp]
+    retained = set(retained_ids)
+    indices = [index for index in subset.indices if subset.dataset.ids[index] in retained]
+    if not retained or len(indices) != len(retained_ids):
+        raise ValueError(f"{rbp}: retained IDs must be unique members of the original test split")
+    return torch.utils.data.Subset(subset.dataset, indices)
+
+
 def evaluate_rbp(
     config: dict[str, Any],
     rbp: str,
@@ -188,8 +198,11 @@ def evaluate_rbp(
         raise RuntimeError(f"{rbp}: checkpoint was trained with a different split")
     if checkpoint.get("split_strategy") != config["split_protocol"]["strategy"]:
         raise RuntimeError(f"{rbp}: checkpoint split strategy is incompatible")
+    subset = subsets[split]
+    if split == "test":
+        subset = paper_test_subset(rbp, subset)
     loader = make_loader(
-        subsets[split],
+        subset,
         batch_size=batch_size,
         shuffle=False,
         seed=int(config["training"]["seed"]),
@@ -241,7 +254,7 @@ def verify_all_checkpoints(config: dict[str, Any], device: torch.device) -> None
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description='Checkpoint loading and Native/SeqCal evaluation for the full RSEC model.')
     parser.add_argument("--config", default=str(PROJECT_ROOT / "config.yaml"))
     parser.add_argument("--rbp", choices=(*RBPS, "all"), default="all")
     parser.add_argument("--split", choices=("train", "val", "test"), default="test")

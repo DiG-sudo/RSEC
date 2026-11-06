@@ -1,5 +1,3 @@
-"""Train the full fixed-order RSEC model on a predefined experimental split."""
-
 from __future__ import annotations
 
 import argparse
@@ -15,6 +13,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import yaml
+from torch.utils.data import Subset
 
 from data import RBPS, dense_labels_to_intervals, load_splits, make_loader
 from evaluate import evaluate_model, load_checkpoint
@@ -22,6 +21,14 @@ from rsec import RSEC, RSECConfig, fixed_order_nll
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
+
+EXCLUDED_TRAINING_IDS = {
+    "EIF4A3": {"train": ["hsa_circ_0001678"]},
+    "IGF2BP2": {
+        "train": ["hsa_circ_0002577", "hsa_circ_0034970", "hsa_circ_0047707", "hsa_circ_0053429"],
+    },
+    "IGF2BP3": {"train": ["hsa_circ_0002811"], "val": ["hsa_circ_0032884"]},
+}
 
 
 def seed_everything(seed: int) -> None:
@@ -121,7 +128,14 @@ def train(args: argparse.Namespace) -> None:
     data_root = Path(args.data_root) if args.data_root else PROJECT_ROOT / config["data_root"]
     split_path = PROJECT_ROOT / rbp_config["split"]
     splits, computed_hash, _ = load_splits(data_root, args.rbp, split_path)
-    # The checked-in manifest is the source of truth for the active split.
+    excluded_ids = EXCLUDED_TRAINING_IDS.get(args.rbp, {})
+    for split, identifiers in excluded_ids.items():
+        subset = splits[split]
+        excluded = set(identifiers)
+        indices = [index for index in subset.indices if subset.dataset.ids[index] not in excluded]
+        if len(subset) - len(indices) != len(excluded):
+            raise RuntimeError(f"{args.rbp}: excluded IDs missing from the original {split} split")
+        splits[split] = Subset(subset.dataset, indices)
 
     model_config = dict(config["model"])
     if isinstance(model_config.get("dilations"), list):
@@ -133,6 +147,8 @@ def train(args: argparse.Namespace) -> None:
             raise RuntimeError("initialization checkpoint is not the full RSEC model")
         if checkpoint.get("split_hash") != computed_hash:
             raise RuntimeError("initialization checkpoint was trained with a different split")
+        if checkpoint.get("excluded_training_ids", {}) != excluded_ids:
+            raise RuntimeError("initialization checkpoint uses different training or validation exclusions")
         model.load_state_dict(checkpoint["model_state"], strict=True)
 
     optimizer = torch.optim.AdamW(
@@ -179,6 +195,8 @@ def train(args: argparse.Namespace) -> None:
             raise RuntimeError("last checkpoint belongs to a different model")
         if resume.get("split_hash") != computed_hash:
             raise RuntimeError("last checkpoint was trained with a different split")
+        if resume.get("excluded_training_ids", {}) != excluded_ids:
+            raise RuntimeError("last checkpoint uses different training or validation exclusions")
         if resume.get("split_strategy") != config["split_protocol"]["strategy"]:
             raise RuntimeError("last checkpoint uses an incompatible split strategy")
         model.load_state_dict(resume["model_state"], strict=True)
@@ -239,6 +257,7 @@ def train(args: argparse.Namespace) -> None:
                 "model_config": asdict(model.cfg),
                 "seed": seed,
                 "split_hash": computed_hash,
+                "excluded_training_ids": excluded_ids,
                 "split_strategy": config["split_protocol"]["strategy"],
                 "implementation_version": 1,
                 "selection_implementation_version": 2,
@@ -277,6 +296,7 @@ def train(args: argparse.Namespace) -> None:
                 "epoch": epoch,
                 "seed": seed,
                 "split_hash": computed_hash,
+                "excluded_training_ids": excluded_ids,
                 "split_strategy": config["split_protocol"]["strategy"],
                 "model_state": model.state_dict(),
                 "optimizer_state": optimizer.state_dict(),
@@ -300,6 +320,7 @@ def train(args: argparse.Namespace) -> None:
     summary = {
         "rbp": args.rbp,
         "split_hash": computed_hash,
+        "excluded_training_ids": excluded_ids,
         "checkpoint": str(best_checkpoint_path),
         "epochs_run": len(rows),
         "best_validation_metrics": best_event_metrics,
@@ -308,7 +329,7 @@ def train(args: argparse.Namespace) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description='Train the full fixed-order RSEC model on a predefined experimental split.')
     parser.add_argument("--config", default=str(PROJECT_ROOT / "config.yaml"))
     parser.add_argument("--rbp", required=True, choices=RBPS)
     parser.add_argument("--data-root")

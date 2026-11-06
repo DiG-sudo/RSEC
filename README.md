@@ -1,102 +1,39 @@
 # RSEC
 
-Official code and data for **Residual-Scope Event Completion (RSEC)**, which
-directly predicts complete circRNA–RBP binding regions. This repository contains
-only the full RSEC model; baseline implementations and ablation variants are not
-included.
+RSEC 用于预测全长 circRNA 中的 RBP 结合区域。本仓库提供模型代码、数据和训练好的权重。
 
-## Contents
+## 安装
 
-```text
-RSEC_public/
-├── README.md
-├── requirements.txt
-├── config.yaml
-├── rsec.py
-├── data.py
-├── metrics.py
-├── train.py
-├── evaluate.py
-├── predict.py
-├── data/<RBP>/
-├── splits_fixed_60_20_20/<RBP>/split.json
-└── checkpoints/<RBP>/best_event_checkpoint.pt
-```
-
-Seven RBP-specific datasets and checkpoints are included: EIF4A3, EWSR1,
-FXR1, FXR2, IGF2BP2, IGF2BP3, and MOV10. The data originate from the datasets
-distributed with circGMST. In each RBP directory, `<RBP>_seq.fasta` contains
-the complete circRNA sequences, while `<RBP>_train.fasta` and
-`<RBP>_test.fasta` provide the source binding-region annotations. These legacy
-filenames do not define the RSEC split. The authoritative sequence-level
-60%/20%/20% membership is stored in `splits_fixed_60_20_20/`.
-
-## Installation
-
-Python 3.10 is recommended.
+建议使用 Python 3.10。
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-For GPU use, install the PyTorch build appropriate for the local CUDA version.
-
-## Evaluate the paper checkpoints
+## 评估
 
 ```bash
-python evaluate.py \
-  --rbp EIF4A3 \
-  --split test \
-  --protocol seqcal \
-  --output outputs/EIF4A3_test.json
-
-python evaluate.py \
-  --rbp all \
-  --split test \
-  --protocol seqcal \
-  --output outputs/all_test.json
+python evaluate.py --rbp all --split test --protocol seqcal --output outputs/all_test.json
 ```
 
-Evaluation verifies the configured checkpoint checksum and confirms that the
-checkpoint was trained on the checked-in split. Coordinates in prediction
-outputs are zero-based and inclusive.
+程序按 `retained_test_ids.json` 选择论文使用的测试样本。将 `all` 改为对应的 RBP 名称即可单独评估。
 
-## Predict new sequences
-
-Provide any nucleotide FASTA file whose records have unique identifiers.
+## 预测
 
 ```bash
-python predict.py \
-  --rbp IGF2BP3 \
-  --input your_sequences.fasta \
-  --protocol seqcal \
-  --output outputs/IGF2BP3_predictions.json
+python predict.py --rbp IGF2BP3 --input sequences.fasta --output outputs/predictions.json
 ```
 
-Use `--protocol native` to run the uncalibrated decoder. The default `seqcal`
-protocol applies the validation-selected threshold recorded in `config.yaml`.
+输入为 FASTA 文件，输出坐标从 0 开始，包含起点和终点。
 
-## Train on the fixed split
+## 训练
 
 ```bash
-python train.py \
-  --rbp EIF4A3 \
-  --output outputs/EIF4A3/rsec
+python train.py --rbp EIF4A3 --output outputs/EIF4A3/rsec
 ```
 
-Training reads the checked-in manifest and selects the best checkpoint using
-validation Event AP averaged across IoU thresholds 0.3–0.7. Test labels are not
-used for model selection or SeqCal threshold selection.
+随附权重使用原始训练集和验证集。重新训练时，脚本会自动排除指定的异常标注记录。
 
-## Reproducibility safeguards
+## 数据
 
-`config.yaml` records the paper model parameters, validation-selected SeqCal
-thresholds, split hashes, and checkpoint SHA-256 values. Training, evaluation,
-and prediction reject incompatible split or checkpoint metadata rather than
-silently mixing experimental settings.
-
-Before public redistribution, the repository owner should select a code license
-and confirm that redistribution of the bundled third-party datasets complies
-with their source terms.
+数据来自 circGMST，保存在 `data/`。训练、验证和测试的原始划分保存在 `splits_fixed_60_20_20/`。 [circGMST 原始数据](https://github.com/gyj9811/circGMST/tree/9300b5cec040b3c5eea09cd0a7acf0c5e54b2f1d/nucleotidedatasets)

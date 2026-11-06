@@ -1,5 +1,3 @@
-"""Event-level metrics used to evaluate RSEC and comparison models."""
-
 from __future__ import annotations
 
 from typing import Sequence
@@ -20,7 +18,6 @@ def interval_iou(left: Event, right: Event) -> float:
 def exact_event_matching(
     gold: Sequence[Event], predicted: Sequence[Event], threshold: float
 ) -> list[tuple[int, int, float]]:
-    """Maximum-cardinality, then maximum-IoU, one-to-one matching."""
     best: tuple[int, float, list[tuple[int, int, float]]] = (-1, -1.0, [])
 
     def search(

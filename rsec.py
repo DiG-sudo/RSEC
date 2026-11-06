@@ -1,10 +1,3 @@
-"""Full RSEC model, fixed-order objective, and sequential decoder.
-
-This module contains model code only.  Its parameter names and tensor shapes
-match ``rsec_null_span_fixed_order`` checkpoints produced by the original
-training program.
-"""
-
 from __future__ import annotations
 
 import math
@@ -414,7 +407,6 @@ def canonicalize_gold_intervals(
 
 
 class RSEC(nn.Module):
-    """Full fixed-order RSEC with unified NULL and legal-span competition."""
 
     training_objective_mode = "fixed_left_to_right"
 
@@ -582,7 +574,6 @@ def fixed_order_nll(
 def decode_from_memory(
     model: RSEC, memory: torch.Tensor, sequence_mask: torch.Tensor
 ) -> dict[str, Any]:
-    """Decode an already encoded batch without repeating the encoder pass."""
     batch, length = sequence_mask.shape
     lengths = sequence_mask.sum(-1).long()
     active = lengths > 0
@@ -702,6 +693,5 @@ def decode_from_memory(
 
 @torch.inference_mode()
 def decode(model: RSEC, x: torch.Tensor, sequence_mask: torch.Tensor) -> dict[str, Any]:
-    """Encode once and run Native sequential decoding."""
     memory, _ = model.encode(x, sequence_mask)
     return decode_from_memory(model, memory, sequence_mask)
